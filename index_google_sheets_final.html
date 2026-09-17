@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dziennik samopoczucia</title>
+<style>
+:root{
+  --bg:#fdeaf3;
+  --card:#ffffff;
+  --text:#4b3842;
+  --muted:#9b7f8c;
+  --accent:#e88bb5;
+  --accent-hover:#d96d9e;
+  --soft:#fff2f8;
+  --border:#f0d6e2;
+  --danger:#c86f76;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; min-height:100vh; padding:24px 12px;
+  font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;
+  background:radial-gradient(circle at 15% 15%, #fff7fb 0%, transparent 32%), radial-gradient(circle at 85% 85%, #f9d7e7 0%, transparent 35%), linear-gradient(145deg,#fdeaf3,#fff8fb);
+  color:var(--text);
+}
+.container{
+  width:100%; max-width:520px; margin:auto;
+  background:var(--card); border-radius:24px; padding:28px;
+  box-shadow:0 14px 40px rgba(45,75,65,.10);
+}
+h1{font-size:1.65rem;margin:0 0 7px;text-align:center}
+.subtitle{text-align:center;color:var(--muted);margin:0 0 24px}
+.step{display:none}.step.active{display:block}
+.date-row{margin-bottom:22px}
+label{display:block;font-weight:600;margin-bottom:8px}
+input[type=date],input[type=number],textarea{
+  width:100%; border:2px solid var(--border); border-radius:12px;
+  padding:12px; font:inherit; outline:none; color:var(--text);
+  background:#fff;
+}
+input:focus,textarea:focus{border-color:var(--accent)}
+textarea{min-height:90px;resize:vertical}
+.question{
+  background:var(--soft); border:1px solid var(--border);
+  padding:16px; border-radius:16px; margin-bottom:13px;
+}
+.question-title{font-weight:650;margin-bottom:11px}
+.scale{display:grid;grid-template-columns:repeat(5,1fr);gap:7px}
+.scale button{
+  border:2px solid var(--border);background:#fff;color:var(--text);
+  padding:10px 3px;border-radius:11px;cursor:pointer;font-weight:700;
+  transition:.18s;
+}
+.scale button:hover{border-color:var(--accent);transform:translateY(-1px)}
+.scale button.selected{background:var(--accent);border-color:var(--accent);color:#fff}
+.scale-labels{display:flex;justify-content:space-between;color:var(--muted);font-size:.72rem;margin-top:6px}
+.pulse-box{margin-top:18px}
+.pulse-hint{font-size:.78rem;color:var(--muted);margin-top:5px}
+.btn{
+  width:100%;border:0;border-radius:14px;padding:13px;
+  background:var(--accent);color:#fff;font-weight:700;font-size:1rem;
+  cursor:pointer;margin-top:16px;transition:.18s;
+}
+.btn:hover{background:var(--accent-hover);transform:translateY(-1px)}
+.btn.secondary{background:#edf3f1;color:var(--text)}
+.error{color:var(--danger);font-size:.86rem;margin-top:8px;display:none}
+.result-card{
+  text-align:center;background:var(--soft);border-radius:20px;padding:22px;margin:18px 0
+}
+.percent{font-size:3.2rem;font-weight:800;color:var(--accent);line-height:1}
+.average{margin-top:8px;color:var(--muted)}
+.summary{
+  display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:16px
+}
+.stat{
+  background:#fff;border:1px solid var(--border);border-radius:13px;padding:11px;text-align:left
+}
+.stat small{display:block;color:var(--muted);font-size:.72rem;margin-bottom:3px}
+.stat strong{font-size:1rem}
+.history{margin-top:24px}
+.history h2{font-size:1.1rem;margin:0 0 10px}
+.history-item{
+  display:flex;justify-content:space-between;align-items:center;
+  border-bottom:1px solid #edf1ef;padding:11px 2px
+}
+.history-item:last-child{border-bottom:0}
+.badge{font-weight:750;color:var(--accent)}
+.empty{color:var(--muted);font-size:.9rem}
+.footer{text-align:center;color:#a0aaa7;font-size:.72rem;margin-top:20px;line-height:1.4}
+@media(max-width:420px){.container{padding:21px}.summary{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="step active" id="step-1">
+    <h1>🌿 Dziennik samopoczucia</h1>
+    <p class="subtitle">Jak się dzisiaj czujesz?</p>
+
+    <div class="date-row">
+      <label for="date">Data</label>
+      <input type="date" id="date">
+    </div>
+
+    <div id="questions"></div>
+
+    <div class="pulse-box">
+      <label for="pulse">❤️ Puls (BPM)</label>
+      <input type="number" id="pulse" min="30" max="220" placeholder="np. 72">
+      <div class="pulse-hint">Wpisz zmierzoną wartość pulsu. Puls nie wpływa na procentowy wynik samopoczucia.</div>
+    </div>
+
+    <label for="note" style="margin-top:18px">📝 Dodatkowa notatka</label>
+    <textarea id="note" placeholder="Np. lepiej się czuję wieczorem..."></textarea>
+
+    <div class="error" id="error"></div>
+    <button class="btn" onclick="saveDay()">Zapisz dzisiejszy wynik ✨</button>
+    <button class="btn secondary" onclick="showHistory()">Zobacz historię 📊</button>
+
+    <div class="footer">
+      To dziennik obserwacji samopoczucia. Nie zastępuje porady medycznej.
+    </div>
+  </div>
+
+  <div class="step" id="step-2">
+    <h1>Dziękuje &lt;3</h1>
+    <p class="subtitle">Wyniki przyjete do analizy</p>
+    <p class="subtitle" id="resultDate"></p>
+
+    <div class="summary" id="resultSummary"></div>
+
+    <button class="btn" onclick="resetForm()">Wprowadź kolejny dzień</button>
+    <button class="btn secondary" onclick="showHistory()">Historia wyników 📈</button>
+  </div>
+
+  <div class="step" id="step-3">
+    <h1>📈 Historia</h1>
+    <p class="subtitle">Twoje zapisane dni</p>
+    <div class="history" id="history"></div>
+    <button class="btn" onclick="resetForm()">Wróć do dzisiejszego wpisu</button>
+  </div>
+
+</div>
+
+<script>
+/*
+  Wklej tutaj adres wdrożonego Google Apps Script Web App.
+  Po podłączeniu dane z każdego wpisu będą trafiały do Google Sheets.
+*/
+const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyvKK1fa1PpDj00R9jiQnGKfNHec0sIGyLJaCYt1-ySJ7Pzm3S1vt4ITfD4XX0Qcac/exec';
+
+const questions = [
+  {id:'mood', icon:'😊', name:'Samopoczucie', low:'bardzo źle', high:'bardzo dobrze'},
+  {id:'headache', icon:'🤕', name:'Ból głowy', low:'brak', high:'bardzo silny'},
+  {id:'throat', icon:'😷', name:'Ból gardła', low:'brak', high:'bardzo silny'},
+  {id:'runnyNose', icon:'🤧', name:'Katar', low:'brak', high:'bardzo silny'},
+  {id:'backPain', icon:'🩷', name:'Ból pleców', low:'brak', high:'bardzo silny'},
+  {id:'energy', icon:'⚡', name:'Poziom energii', low:'bardzo niski', high:'bardzo wysoki'},
+  {id:'sleep', icon:'😴', name:'Jakość snu', low:'bardzo słaba', high:'bardzo dobra'},
+  {id:'mental', icon:'🧠', name:'Samopoczucie psychiczne', low:'bardzo złe', high:'bardzo dobre'}
+];
+
+const questionsEl = document.getElementById('questions');
+const selections = {};
+
+questions.forEach(q=>{
+  const div=document.createElement('div');
+  div.className='question';
+  div.innerHTML=`
+    <div class="question-title">${q.icon} ${q.name}</div>
+    <div class="scale" data-id="${q.id}">
+      ${[1,2,3,4,5].map(n=>`<button type="button" onclick="choose('${q.id}',${n},this)">${n}</button>`).join('')}
+    </div>
+    <div class="scale-labels"><span>${q.low}</span><span>${q.high}</span></div>`;
+  questionsEl.appendChild(div);
+});
+
+document.getElementById('date').valueAsDate = new Date();
+
+function choose(id,value,el){
+  selections[id]=value;
+  el.parentElement.querySelectorAll('button').forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+function showStep(n){
+  document.querySelectorAll('.step').forEach(s=>s.classList.remove('active'));
+  document.getElementById('step-'+n).classList.add('active');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function getHistory(){
+  try{return JSON.parse(localStorage.getItem('healthDiary')||'[]')}catch(e){return []}
+}
+function setHistory(data){localStorage.setItem('healthDiary',JSON.stringify(data))}
+
+async function saveDay(){
+  const error=document.getElementById('error');
+  const missing=questions.filter(q=>!selections[q.id]);
+  const pulse=Number(document.getElementById('pulse').value);
+  if(missing.length){
+    error.textContent='Uzupełnij wszystkie oceny od 1 do 5.';
+    error.style.display='block'; return;
+  }
+  if(!pulse || pulse<30 || pulse>220){
+    error.textContent='Wpisz prawidłowy puls (30–220 BPM).';
+    error.style.display='block'; return;
+  }
+  error.style.display='none';
+
+  const date=document.getElementById('date').value;
+  const note=document.getElementById('note').value.trim();
+
+  const entry={
+    date,pulse,note,
+    values:{...selections},
+  };
+
+  const history=getHistory();
+  const index=history.findIndex(x=>x.date===date);
+  if(index>=0) history[index]=entry; else history.push(entry);
+  history.sort((a,b)=>b.date.localeCompare(a.date));
+  setHistory(history);
+
+  // Wyślij wpis do Google Sheets, jeśli podano adres Apps Script.
+  if (GOOGLE_SCRIPT_URL && !GOOGLE_SCRIPT_URL.includes('WKLEJ_TUTAJ')) {
+    try {
+      await fetch(GOOGLE_SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: {'Content-Type':'text/plain;charset=utf-8'},
+        body: JSON.stringify({
+          date: entry.date,
+          pulse: entry.pulse,
+          note: entry.note,
+          values: entry.values
+        })
+      });
+    } catch (e) {
+      console.warn('Nie udało się wysłać danych do Google Sheets:', e);
+    }
+  }
+
+  renderResult(entry);
+  showStep(2);
+}
+
+function renderResult(entry){
+  document.getElementById('resultDate').textContent=formatDate(entry.date);
+
+  const box=document.getElementById('resultSummary');
+  box.innerHTML='';
+  questions.forEach(q=>{
+    const s=document.createElement('div');
+    s.className='stat';
+    s.innerHTML=`<small>${q.icon} ${q.name}</small><strong>${entry.values[q.id]} / 5</strong>`;
+    box.appendChild(s);
+  });
+  const pulse=document.createElement('div');
+  pulse.className='stat';
+  pulse.innerHTML=`<small>❤️ Puls</small><strong>${entry.pulse} BPM</strong>`;
+  box.appendChild(pulse);
+}
+
+function formatDate(d){
+  const [y,m,day]=d.split('-');
+  return `${day}.${m}.${y}`;
+}
+
+function showHistory(){
+  const data=getHistory();
+  const el=document.getElementById('history');
+  if(!data.length){
+    el.innerHTML='<div class="empty">Nie ma jeszcze zapisanych wyników.</div>';
+  }else{
+    el.innerHTML=data.map(e=>`
+      <div class="history-item">
+        <div><strong>${formatDate(e.date)}</strong><br><small>${e.pulse} BPM</small></div>
+        
+      </div>`).join('');
+  }
+  showStep(3);
+}
+
+function resetForm(){
+  Object.keys(selections).forEach(k=>delete selections[k]);
+  document.querySelectorAll('.scale button').forEach(b=>b.classList.remove('selected'));
+  document.getElementById('pulse').value='';
+  document.getElementById('note').value='';
+  document.getElementById('date').valueAsDate=new Date();
+  showStep(1);
+}
+</script>
+</body>
+</html>
